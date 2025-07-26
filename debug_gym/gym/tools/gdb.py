@@ -64,7 +64,13 @@ class GDBTool(EnvironmentTool):
         except TimeoutError as e:
             output = f"The command `{command}` has timed out. {e!r}"
 
-        return output.replace("(gdb)", "").strip()  # remove the prompt
+        # Remove the (gdb) prompt and any echoed command
+        output = output.replace("(gdb)", "").strip()
+        # Optionally, remove the echoed command from the output
+        if output.startswith(command):
+            output = output[len(command):].lstrip("\n\r ")
+
+        return output
 
     def close_gdb(self):
         self._session.close()
@@ -153,8 +159,7 @@ class GDBTool(EnvironmentTool):
                     "Blank or comment",
                     "*** Blank or comment",
                 ):
-                    # if out of bounds, gdb will return "End of file"
-                    # https://github.com/python/cpython/blob/main/Lib/pdb.py#L1464-L1485
+                    # if out of bounds, gdb may return messages like 'No such file or directory.' or 'No line number'
                     success = False
                     output = f"Invalid line number: {gdb_out}."
                 else:
