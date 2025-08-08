@@ -3,8 +3,8 @@ base:
     output_path: "exps/debug_cpp"
     env_kwargs: {
         "path": "data/cpp",
-        "entrypoint": "cd ./data/cpp && make && cd - && ./data/cpp/main",
-        "debug_entrypoint": "cd ./data/cpp && make && cd - && gdb ./data/cpp/main",
+        "entrypoint": "make && ./main",
+        "debug_entrypoint": "make && gdb ./main",
         "dir_tree_depth": 1,
         "run_timeout": 10,
         # shortcut features
