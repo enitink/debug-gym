@@ -8,27 +8,22 @@ from debug_gym.gym.tools.toolbox import Toolbox
 
 
 @Toolbox.register()
-class GDBTool(EnvironmentTool):
-    name: str = "gdb"
+class BuildTool(EnvironmentTool):
+    name: str = "build"
     examples = [
-        """gdb(command="break example/src/main.cpp:42") to set a breakpoint at line 42 in example/src/main.cpp.""",
-        """gdb(command="continue") to continue execution until the next breakpoint.""",
-        """gdb(command="print x") to print the value of variable x.""",
-        """gdb(command="list") to list the source code around the current line.""",
-        """gdb(command="info breakpoints") to list all breakpoints.""",
-        """gdb(command="delete 1") to delete the breakpoint with id 1.""",
-        """gdb(command="clear example/src/main.cpp:26") to clear the breakpoint at line 26 in example/src/main.cpp.""",
+        """build(command="make") to set a build the project and generate binary.""",
+        """build(command="bcp") to build the project with the bcp tool, in razzle environment"""
     ]
     description = (
-        "An interface to the gdb debugger. Send a command to the gdb terminal. The command should be a valid gdb command."
-        + "\nWhen using the breakpoint command (e.g., 'b', 'break', 'cl', 'clear'), make sure you specify the file path and line number in the format `file_path:line_number`."
+        "An interface to the build system. Send a command to the build terminal. The command should be a valid build command."
+        + "\nWhen using the build command (e.g., 'build', 'make'), make sure you are in the file path `cd <path>`."
         + "\nExamples (for demonstration purposes only, you need to adjust the tool calling format according to your specific syntax):"
         + "\n".join(examples)
     )
     arguments = {
         "command": {
             "type": ["string"],
-            "description": "The command to be sent to the gdb terminal. The command should be a valid gdb command. See https://www.gnu.org/software/gdb/documentation/ for more information.",
+            "description": "The command to be sent to the terminal. The command should be a valid build command.",
         },
     }
 
@@ -38,7 +33,7 @@ class GDBTool(EnvironmentTool):
         self._session: ShellSession = None
 
     def __deepcopy__(self, memo):
-        """Create a deep copy of the GDBTool instance with _session set to None."""
+        """Create a deep copy of the BuildTool instance with _session set to None."""
         result = type(self).__new__(self.__class__)
         memo[id(self)] = result
         # Copy all attributes except _session
@@ -55,17 +50,17 @@ class GDBTool(EnvironmentTool):
         return result
 
     @property
-    def gdb_is_running(self):
+    def build_tool_is_running(self):
         return self._session is not None and self._session.is_running
 
-    def interact_with_gdb(self, command: str, timeout: int):
+    def interact_with_build_tool(self, command: str, timeout: int):
         try:
-            output = self._session.run(command, read_until="(gdb)", timeout=timeout)
+            output = self._session.run(command, timeout=timeout)
         except TimeoutError as e:
             output = f"The command `{command}` has timed out. {e!r}"
 
-        # Remove the (gdb) prompt and any echoed command
-        output = output.replace("(gdb)", "").strip()
+        # Remove the (build) prompt and any echoed command
+        output = output.replace("(build)", "").strip()
         # Optionally, remove the echoed command from the output
         if output.startswith(command):
             output = output[len(command):].lstrip("\n\r ")
