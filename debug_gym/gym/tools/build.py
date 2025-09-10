@@ -11,13 +11,16 @@ from debug_gym.gym.tools.toolbox import Toolbox
 class BuildTool(EnvironmentTool):
     name: str = "build"
     examples = [
-        """build(command="make") to set a build the project and generate binary.""",
-        """build(command="bcp") to build the project with the bcp tool, in razzle environment"""
+        """build(command="make") to build the project and generate binary, which is used by entry point config. By default it runs all section, to build one should use this""",
+        """build(command="make <section>) where section is one of the section from the make file"""
+        """build(command="make clean") to run clean section of the Makefile. This should be used only to clear the binaries."""
     ]
     description = (
-        "An interface to the build system. Send a command to the build terminal. The command should be a valid build command."
-        + "\nWhen using the build command (e.g., 'build', 'make'), make sure you are in the file path `cd <path>`."
+        "An interface to the build system. First time and after every change in the code, build system needs to be invoked to generate new binary."
+        + "\nSend a command to the build terminal. The command should be a valid build command."
+        + "\nWhen using the build command (e.g., 'build', 'make'), make sure you are in the file root folder path `cd <root path>`."
         + "\nExamples (for demonstration purposes only, you need to adjust the tool calling format according to your specific syntax):"
+        + "\nFor 'make' to work, you need to have a Makefile in the root folder of the project."
         + "\n".join(examples)
     )
     arguments = {
@@ -84,7 +87,7 @@ class BuildTool(EnvironmentTool):
             if environment.persistent_breakpoints:
                 # restore persistent breakpoints
                 for _, _command in environment.current_breakpoints_state.items():
-                    self.interact_with_gdb(_command, environment.run_timeout)
+                    self.interact_with_build_tool(_command, environment.run_timeout)
                 if len(environment.current_breakpoints_state) > 0:
                     initial_output = "\n".join(
                         [initial_output, "Breakpoints have been restored."]
@@ -126,10 +129,10 @@ class BuildTool(EnvironmentTool):
                 _warning += "Multiple commands are not supported. Only the first command will be executed."
 
         success, output = True, ""
-        if not self.gdb_is_running:
+        if not self.build_tool_is_running:
             output += self.start_gdb(environment)
 
-        if not self.gdb_is_running:
+        if not self.build_tool_is_running:
             # gdb failed to start
             return Observation(self.name, f"Failure calling gdb:\n{output}")
 
@@ -146,7 +149,7 @@ class BuildTool(EnvironmentTool):
             success, output = True, "All breakpoints have been cleared."
         else:  # other gdb commands, send directly
             try:
-                gdb_out = self.interact_with_gdb(command, environment.run_timeout)
+                gdb_out = self.interact_with_build_tool(command, environment.run_timeout)
                 # remove the working dir from the output
                 gdb_out = gdb_out.replace(f"{environment.working_dir}/", "")
                 if gdb_out in (
@@ -189,14 +192,14 @@ class BuildTool(EnvironmentTool):
             obs = f"{output.strip()}\n"
 
         # Add the current frame information to the observation.
-        if self.gdb_is_running:
+        if self.build_tool_is_running:
             # read the current frame info to determine the current file
             current_frame = self.set_current_frame_file(environment)
 
             # free 'list' to provide context around the current frame
             list_output = ""
             if environment.auto_list and command.split()[0] not in ["l", "list"]:
-                list_output = self.interact_with_gdb("l .", environment.run_timeout)
+                list_output = self.interact_with_build_tool("l .", environment.run_timeout)
 
             if current_frame:
                 obs += f"\nCurrent frame:\n{current_frame}\n"
@@ -260,7 +263,7 @@ class BuildTool(EnvironmentTool):
         and the values are the corresponding GDB breakpoint commands.
         """
         command = "info breakpoints"
-        output = self.interact_with_gdb(command, environment.run_timeout)
+        output = self.interact_with_build_tool(command, environment.run_timeout)
         # GDB 'info breakpoints' output example:
         # Num Type           Disp Enb Address            What
         # 1   breakpoint     keep y   0x00005555555551d6 in main at main.cpp:5
@@ -280,7 +283,7 @@ class BuildTool(EnvironmentTool):
         Use 'frame' or 'where' to obtain the current frame (file and line number) in GDB.
         """
         command = "frame"
-        output = self.interact_with_gdb(command, environment.run_timeout)
+        output = self.interact_with_build_tool(command, environment.run_timeout)
         # GDB 'frame' output example:
         # #0  main () at main.cpp:5
         file_path = None
