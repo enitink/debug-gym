@@ -2,15 +2,15 @@ base:
     # Environment configs
     output_path: "exps/debug_cpp"
     env_kwargs: {
-        "path": "data/cpp",
-        "entrypoint": "make && ./main",
-        "debug_entrypoint": "make && gdb ./main",
+        "path": "data/cpp/deadlock",
+        "entrypoint": "make && ./output/test",
+        "debug_entrypoint": "make && gdb ./output/test",
         "dir_tree_depth": 1,
         "run_timeout": 10,
         # shortcut features
         "auto_eval_on_rewrite": False,  # The environment will automatically call the Eval tool after a successful rewrite. If this is set to True, the agent does not need to call the Eval tool itself.
-        "persistent_breakpoints": True,  # The environemnt will keep a set of breakpoint states across PDB sessions. When a new PDB session is started, the environment will automatically load the breakpoints from the previous session.
-        "auto_list": True,  # The environment will automatically call `list .` via the PDB tool after every pdb tool call, which will show the code around the current frame.
+        "persistent_breakpoints": True,  # The environemnt will keep a set of breakpoint states across GDB sessions. When a new GDB session is started, the environment will automatically load the breakpoints from the previous session.
+        "auto_list": True,  # The environment will automatically call `info breakpoints .` via the GDB tool after every GDB tool call, which will show the code around the current frame.
     }
     tools: ["gdb", "view", "rewrite"]
     terminal: {
@@ -19,7 +19,7 @@ base:
         # session_commands define commands that are always executed before starting a shell session or running a single command in the terminal.
         # session_commands:["conda activate aider"],
         # setup_commands define commands that are executed only once when the terminal is created. This is only supported for Docker terminal.
-        setup_commands: ["pip install pytest"],
+        setup_commands: ["export LD_LIBRARY_PATH=./output:$LD_LIBRARY_PATH"],
     }
 
     # LLM configs
@@ -37,7 +37,7 @@ base:
     # system_prompt_template_file: "script/templates/system_prompt.jinja"
 
 rewrite_agent:
-    tools: ["view", "rewrite", "eval"]
+    tools: ["build", "view", "rewrite", "eval"]
 
 debug_agent_cpp:
-    tools: ["gdb", "view", "rewrite", "eval"]
+    tools: ["build", "gdb", "view", "rewrite", "eval"]

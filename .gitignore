@@ -178,8 +178,6 @@ logs/
 # Config files
 *.cfg
 
-/data
-
 vscode/out
 vscode/node_modules
 vscode/package-lock.json
