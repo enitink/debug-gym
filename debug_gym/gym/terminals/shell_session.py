@@ -4,6 +4,7 @@ import fcntl
 import os
 import pty
 import shlex
+import signal
 import subprocess
 import termios
 import time
@@ -203,8 +204,9 @@ class ShellSession:
         try:
             output += self.read(read_until=read_until, timeout=timeout)
         except TimeoutError as e:
-            self.close()
+            #self.close()
             self.logger.debug(f"{e!r}")
+            os.kill(self.process.pid, signal.SIGINT)
             raise
 
         self.logger.debug(f"{self}: Output: {output!r}")
