@@ -11,13 +11,76 @@ from debug_gym.gym.tools.toolbox import Toolbox
 class GDBTool(EnvironmentTool):
     name: str = "gdb"
     examples = [
-        """gdb(command="break example/src/main.cpp:42") to set a breakpoint at line 42 in example/src/main.cpp.""",
-        """gdb(command="continue") to continue execution until the next breakpoint.""",
-        """gdb(command="print x") to print the value of variable x.""",
-        """gdb(command="list") to list the source code around the current line.""",
+        """gdb(command="break main.cpp:42") to set a breakpoint at line 42 in main.cpp.""",
+        """gdb(command="break function_name") to set a breakpoint at a function.""",
+        """gdb(command="break if x==42") to set a conditional breakpoint when x==42.""",
+        """gdb(command="tbreak main.cpp:50") to set a temporary breakpoint at line 50.""",
+        """gdb(command="watch x") to break when variable x changes.""",
+        """gdb(command="rwatch x") to break when variable x is read.""",
+        """gdb(command="awatch x") to break when variable x is accessed (read or write).""",
+        """gdb(command="commands 1") to specify commands to run when breakpoint 1 is hit.""",
+        """gdb(command="delete 1") to delete breakpoint number 1.""",
+        """gdb(command="disable breakpoint 1") to disable breakpoint number 1.""",
+        """gdb(command="enable breakpoint 1") to enable breakpoint number 1.""",
         """gdb(command="info breakpoints") to list all breakpoints.""",
-        """gdb(command="delete 1") to delete the breakpoint with id 1.""",
-        """gdb(command="clear example/src/main.cpp:26") to clear the breakpoint at line 26 in example/src/main.cpp.""",
+        """gdb(command="clear main.cpp:26") to clear the breakpoint at line 26 in main.cpp.""",
+        """gdb(command="run") to start the program from the beginning.""",
+        """gdb(command="continue") to continue execution until the next breakpoint.""",
+        """gdb(command="next") to execute the next line of code (step over).""",
+        """gdb(command="step") to step into the next function call.""",
+        """gdb(command="finish") to run until the current function returns.""",
+        """gdb(command="until 50") to continue until line 50 is reached.""",
+        """gdb(command="jump 100") to jump to line 100 in the current file.""",
+        """gdb(command="signal SIGTERM") to send a signal to the program.""",
+        """gdb(command="catch throw") to break when a C++ exception is thrown.""",
+        """gdb(command="catch catch") to break when a C++ exception is caught.""",
+        """gdb(command="backtrace") to display the call stack.""",
+        """gdb(command="bt full") to display the full call stack with local variables.""",
+        """gdb(command="info frame") to list the current frame.""",
+        """gdb(command="frame 2") to switch to frame 2.""",
+        """gdb(command="up") to move up one frame in the call stack.""",
+        """gdb(command="down") to move down one frame in the call stack.""",
+        """gdb(command="info threads") to list all threads.""",
+        """gdb(command="thread 1") to switch to thread 1.""",
+        """gdb(command="thread apply all bt") to show backtrace for all threads.""",
+        """gdb(command="info registers") to show CPU register values.""",
+        """gdb(command="info sharedlibrary") to list loaded shared libraries.""",
+        """gdb(command="info signals") to list all signals and their handlers.""",
+        """gdb(command="info proc mappings") to show memory mappings of the process.""",
+        """gdb(command="print x") to print the value of variable x.""",
+        """gdb(command="display x") to automatically print the value of x after each stop.""",
+        """gdb(command="undisplay") to remove all automatic display expressions.""",
+        """gdb(command="info locals") to list all local variables.""",
+        """gdb(command="info args") to list all function arguments.""",
+        """gdb(command="set var x=42") to set the value of variable x to 42.""",
+        """gdb(command="ptype x") to print the type of variable x.""",
+        """gdb(command="whatis x") to show the type of x.""",
+        """gdb(command="x/16x &x") to examine 16 hexadecimal values at the address of x.""",
+        """gdb(command="x/s str") to examine a string at the address of str.""",
+        """gdb(command="x/4i $pc") to examine 4 instructions at the program counter.""",
+        """gdb(command="info variables") to list all global and static variables.""",
+        """gdb(command="info functions") to list all functions.""",
+        """gdb(command="info types") to list all defined types.""",
+        """gdb(command="info macros") to list all macros.""",
+        """gdb(command="info source") to show info about the current source file.""",
+        """gdb(command="list") to list the source code around the current line.""",
+        """gdb(command="list main") to list the source code around the function main.""",
+        """gdb(command="list 100,120") to list lines 100 to 120.""",
+        """gdb(command="info sources") to list all source files.""",
+        """gdb(command="info line 42") to show information about line 42.""",
+        """gdb(command="directory ../src") to add ../src to the source search path.""",
+        """gdb(command="quit") to exit the GDB debugger.""",
+        """gdb(command="help") to list all available GDB commands.""",
+        """gdb(command="help break") to get help for the break command.""",
+        """gdb(command="info files") to show information about the executable and symbols.""",
+        """gdb(command="set pagination off") to disable output paging.""",
+        """gdb(command="set logging on") to log output to a file.""",
+        """gdb(command="set environment VAR=value") to set an environment variable.""",
+        """gdb(command="shell ls -l") to run a shell command from GDB.""",
+        """gdb(command="source script.gdb") to execute commands from a script file.""",
+        """gdb(command="set print pretty on") to pretty-print structures.""",
+        """gdb(command="set print elements 0") to print all elements of arrays.""",
+        """gdb(command="set print array on") to print arrays.""",
     ]
     description = (
         "An interface to the gdb debugger. Send a command to the gdb terminal. The command should be a valid gdb command."
@@ -58,11 +121,66 @@ class GDBTool(EnvironmentTool):
     def gdb_is_running(self):
         return self._session is not None and self._session.is_running
 
+    
+    def get_all_thread_ids(self, timeout):
+        """Get all thread IDs from GDB."""
+        output = self._session.run("info threads", read_until="(gdb)", timeout=timeout)
+        # Example line: '* 1    Thread 0x7ffff7e9c740 (LWP 56932) "test" ...'
+        thread_id_pattern = re.compile(r'^\s*[\*\s]?(\d+)\s+Thread')
+        thread_ids = []
+        for line in output.splitlines():
+            match = thread_id_pattern.match(line)
+            if match:
+                thread_ids.append(match.group(1))
+        return thread_ids
+
+    def get_all_frame_ids(self, thread_id, timeout):
+        """Get all frame numbers for a given thread from GDB."""
+        self._session.run(f"thread {thread_id}", read_until="(gdb)", timeout=timeout)
+        output = self._session.run("backtrace", read_until="(gdb)", timeout=timeout)
+        # Example line: '#0  main () at main.cpp:5'
+        frame_id_pattern = re.compile(r'^#(\d+)\s')
+        frame_ids = []
+        for line in output.splitlines():
+            match = frame_id_pattern.match(line)
+            if match:
+                frame_ids.append(match.group(1))
+        return frame_ids
+
+    def get_all_locals_all_threads(self, timeout):
+        """Collect all local variables from all frames of all threads."""
+        thread_ids = self.get_all_thread_ids(timeout)
+        all_locals = {}
+        for thread_id in thread_ids:
+            all_locals[thread_id] = {}
+            frame_ids = self.get_all_frame_ids(thread_id, timeout)
+            for frame_id in frame_ids:
+                self._session.run(f"thread {thread_id}", read_until="(gdb)", timeout=timeout)
+                self._session.run(f"frame {frame_id}", read_until="(gdb)", timeout=timeout)
+                locals_output = self._session.run("info locals", read_until="(gdb)", timeout=timeout)
+                all_locals[thread_id][frame_id] = locals_output
+        return all_locals
+
     def interact_with_gdb(self, command: str, timeout: int):
         try:
             output = self._session.run(command, read_until="(gdb)", timeout=timeout)
         except TimeoutError as e:
-            output = f"The command `{command}` has timed out. {e!r}"
+            # let analyze the status of the gdb session
+            output = f"The command `{command}` had timed out. {e!r} Analyzing the status of the gdb session."
+            command = "thread apply all bt"
+            output = self._session.run(command, read_until="(gdb)", timeout=timeout)
+            # next find out all the threads and it's frames and all the local variables in those frames
+            all_locals = self.get_all_locals_all_threads(timeout)
+            output += "\n\nAll threads and their frames and local variables:\n"
+            for thread_id, frames in all_locals.items():
+                output += f"\nThread {thread_id}:\n"
+                for frame_id, locals_output in frames.items():
+                    output += f"\nFrame {frame_id}:\n{locals_output}\n"
+            output += "\n\n"
+            # finally, we need to close the gdb session, which we ignored in terminal.py
+            self._session.close()
+        except Exception as e:
+            output = f"Failure calling gdb:\n{e!r}"
 
         # Remove the (gdb) prompt and any echoed command
         output = output.replace("(gdb)", "").strip()
@@ -82,6 +200,9 @@ class GDBTool(EnvironmentTool):
         initial_output = self._session.start(
             environment.debug_entrypoint, read_until="(gdb)"
         )
+
+        # Disable paging in GDB
+        self._session.run("set pagination off", read_until="(gdb)", timeout=environment.run_timeout)
 
         if "The program finished and will be restarted" in initial_output:
             self.close_gdb()
