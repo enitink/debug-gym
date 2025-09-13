@@ -11,6 +11,7 @@ from debug_gym.gym.tools.toolbox import Toolbox
 class GDBTool(EnvironmentTool):
     name: str = "gdb"
     examples = [
+        """gdb(command="run") to start the program from the beginning.""",
         """gdb(command="break main.cpp:42") to set a breakpoint at line 42 in main.cpp.""",
         """gdb(command="break function_name") to set a breakpoint at a function.""",
         """gdb(command="break if x==42") to set a conditional breakpoint when x==42.""",
@@ -24,7 +25,6 @@ class GDBTool(EnvironmentTool):
         """gdb(command="enable breakpoint 1") to enable breakpoint number 1.""",
         """gdb(command="info breakpoints") to list all breakpoints.""",
         """gdb(command="clear main.cpp:26") to clear the breakpoint at line 26 in main.cpp.""",
-        """gdb(command="run") to start the program from the beginning.""",
         """gdb(command="continue") to continue execution until the next breakpoint.""",
         """gdb(command="next") to execute the next line of code (step over).""",
         """gdb(command="step") to step into the next function call.""",
@@ -161,30 +161,16 @@ class GDBTool(EnvironmentTool):
                 all_locals[thread_id][frame_id] = locals_output
         return all_locals
 
-    def interact_with_gdb(self, command: str, timeout: int):
+    def interact_with_gdb(self, command: str, timeout: int, self_call: bool = False):
         try:
             output = self._session.run(command, read_until="(gdb)", timeout=timeout)
         except TimeoutError as e:
             # let analyze the status of the gdb session
-            output = f"The command `{command}` had timed out. {e!r} Analyzing the status of the gdb session."
-            command = "thread apply all bt"
-            output = self._session.run(command, read_until="(gdb)", timeout=timeout)
-            # next find out all the threads and it's frames and all the local variables in those frames
-            all_locals = self.get_all_locals_all_threads(timeout)
-            output += "\n\nAll threads and their frames and local variables:\n"
-            for thread_id, frames in all_locals.items():
-                output += f"\nThread {thread_id}:\n"
-                for frame_id, locals_output in frames.items():
-                    output += f"\nFrame {frame_id}:\n{locals_output}\n"
-            output += "\n\n"
-            # finally, we need to close the gdb session, which we ignored in terminal.py
-            self._session.close()
-        except Exception as e:
-            output = f"Failure calling gdb:\n{e!r}"
+            output = f"The command `{command}` had timed out. {e!r}."
+            if not self_call:
+                command = "thread apply all bt"
+                output = self._session.run(command, read_until="(gdb)", timeout=timeout)
 
-        # Remove the (gdb) prompt and any echoed command
-        output = output.replace("(gdb)", "").strip()
-        # Optionally, remove the echoed command from the output
         if output.startswith(command):
             output = output[len(command):].lstrip("\n\r ")
 
