@@ -6,7 +6,7 @@ base:
         "entrypoint": "make && ./output/test",
         "debug_entrypoint": "make && gdb ./output/test",
         "dir_tree_depth": 1,
-        "run_timeout": 20,
+        "run_timeout": 10,
         # shortcut features
         "auto_eval_on_rewrite": False,  # The environment will automatically call the Eval tool after a successful rewrite. If this is set to True, the agent does not need to call the Eval tool itself.
         "persistent_breakpoints": True,  # The environemnt will keep a set of breakpoint states across GDB sessions. When a new GDB session is started, the environment will automatically load the breakpoints from the previous session.
