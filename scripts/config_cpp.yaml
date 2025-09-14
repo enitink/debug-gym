@@ -15,11 +15,11 @@ base:
     tools: ["gdb", "view", "rewrite"]
     terminal: {
         type: "local",  # "docker" or "local"
-        base_image: "python:3.12-slim",
+        base_image: "gcc:latest",
         # session_commands define commands that are always executed before starting a shell session or running a single command in the terminal.
         # session_commands:["conda activate aider"],
         # setup_commands define commands that are executed only once when the terminal is created. This is only supported for Docker terminal.
-        setup_commands: ["export LD_LIBRARY_PATH=./output:$LD_LIBRARY_PATH"],
+        setup_commands: ["apt-get update && apt-get install -y gdb gdbserver", "apt-get install tree"],
     }
 
     # LLM configs
@@ -37,7 +37,8 @@ base:
     # system_prompt_template_file: "script/templates/system_prompt.jinja"
 
 rewrite_agent:
-    tools: ["view", "rewrite"]
+    tools: ["grep", "view", "rewrite", "eval"]
 
 debug_agent_cpp:
-    tools: ["gdb", "view", "rewrite"]
+    tools: ["grep", "gdb", "view", "rewrite", "eval"]
+
