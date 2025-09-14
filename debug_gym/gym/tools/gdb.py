@@ -20,6 +20,7 @@ class GDBTool(EnvironmentTool):
         """gdb(command="rwatch x") to break when variable x is read.""",
         """gdb(command="awatch x") to break when variable x is accessed (read or write).""",
         """gdb(command="commands 1") to specify commands to run when breakpoint 1 is hit.""",
+        """gdb(command="delete") to delete all breakpoints.""",
         """gdb(command="delete 1") to delete breakpoint number 1.""",
         """gdb(command="disable breakpoint 1") to disable breakpoint number 1.""",
         """gdb(command="enable breakpoint 1") to enable breakpoint number 1.""",
@@ -59,10 +60,6 @@ class GDBTool(EnvironmentTool):
         """gdb(command="x/s str") to examine a string at the address of str.""",
         """gdb(command="x/4i $pc") to examine 4 instructions at the program counter.""",
         """gdb(command="info variables") to list all global and static variables.""",
-        """gdb(command="info functions") to list all functions.""",
-        """gdb(command="info types") to list all defined types.""",
-        """gdb(command="info macros") to list all macros.""",
-        """gdb(command="info source") to show info about the current source file.""",
         """gdb(command="list") to list the source code around the current line.""",
         """gdb(command="list main") to list the source code around the function main.""",
         """gdb(command="list 100,120") to list lines 100 to 120.""",
@@ -189,6 +186,8 @@ class GDBTool(EnvironmentTool):
 
         # Disable paging in GDB
         self._session.run("set pagination off", read_until="(gdb)", timeout=environment.run_timeout)
+        # Enable debuginfod in GDB
+        self._session.run("set debuginfod enabled off", read_until="(gdb)", timeout=environment.run_timeout)
 
         if "The program finished and will be restarted" in initial_output:
             self.close_gdb()
@@ -245,13 +244,13 @@ class GDBTool(EnvironmentTool):
             # gdb failed to start
             return Observation(self.name, f"Failure calling gdb:\n{output}")
 
-        if command in ["b", "break"]:
+        if command in ["info breakpoints"]:
             # list all breakpoints
             success, output = (
                 True,
                 f"Breakpoints:\n{environment.current_breakpoints()}\n",
             )
-        elif command in ["cl", "clear"]:
+        elif command in ["delete"]:
             # clear all breakpoints
             environment.current_breakpoints_state = {}
             self.restart_gdb(environment)
@@ -394,7 +393,7 @@ class GDBTool(EnvironmentTool):
         command = "frame"
         output = self.interact_with_gdb(command, environment.run_timeout)
         # GDB 'frame' output example:
-        # #0  main () at main.cpp:5
+        # #0  in main () at main.cpp:5
         file_path = None
         line_number = None
         frame_pattern = re.compile(r"at\s+(.+):(\d+)")
