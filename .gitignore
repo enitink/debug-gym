@@ -10,6 +10,7 @@ __pycache__/
 
 # C extensions
 *.so
+*.a
 
 # Distribution / packaging
 .Python
@@ -185,3 +186,6 @@ vscode/package-lock.json
 debug_gym/llms/copilot.py
 
 .kube/
+
+#data
+data/cpp/output/test
