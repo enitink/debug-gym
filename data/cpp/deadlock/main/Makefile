@@ -1,7 +1,7 @@
 # Makefile to build test.cpp and statically link with libressharing.a
 
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++17 -g
+CXXFLAGS = -Wall -Wextra -std=c++17 -g -fdebug-prefix-map=$(PWD)=.
 TARGET = ../output/test
 INC = -I../inc
 SRC = test.cpp

@@ -2,7 +2,7 @@
 
 CXX = g++
 INC = -I../inc
-CXXFLAGS = -Wall -Wextra -std=c++17 -g -fPIC
+CXXFLAGS = -Wall -Wextra -std=c++17 -g -fPIC -fdebug-prefix-map=$(PWD)=.
 AR = ar
 TARGET = ../output/libressharing.a
 SRC = resource_sharing.cpp
