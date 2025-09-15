@@ -10,6 +10,7 @@ __pycache__/
 
 # C extensions
 *.so
+*.a
 
 # Distribution / packaging
 .Python
@@ -182,3 +183,6 @@ vscode/out
 vscode/node_modules
 vscode/package-lock.json
 .vscode
+
+#data
+data/cpp/output/test

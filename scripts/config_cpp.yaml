@@ -37,8 +37,8 @@ base:
     # system_prompt_template_file: "script/templates/system_prompt.jinja"
 
 rewrite_agent:
-    tools: ["grep", "view", "rewrite", "eval"]
+    tools: ["grep", "view", "rewrite"]
 
 debug_agent_cpp:
-    tools: ["grep", "gdb", "view", "rewrite", "eval"]
+    tools: ["grep", "gdb", "view", "rewrite"]
 

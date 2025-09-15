@@ -63,14 +63,11 @@ class GDBTool(EnvironmentTool):
         """gdb(command="list") to list the source code around the current line.""",
         """gdb(command="list main") to list the source code around the function main.""",
         """gdb(command="list 100,120") to list lines 100 to 120.""",
-        """gdb(command="info sources") to list all source files.""",
         """gdb(command="info line 42") to show information about line 42.""",
         """gdb(command="directory ../src") to add ../src to the source search path.""",
         """gdb(command="quit") to exit the GDB debugger.""",
         """gdb(command="help") to list all available GDB commands.""",
         """gdb(command="help break") to get help for the break command.""",
-        """gdb(command="info files") to show information about the executable and symbols.""",
-        """gdb(command="set pagination off") to disable output paging.""",
         """gdb(command="set logging on") to log output to a file.""",
         """gdb(command="set environment VAR=value") to set an environment variable.""",
         """gdb(command="shell ls -l") to run a shell command from GDB.""",
@@ -163,10 +160,60 @@ class GDBTool(EnvironmentTool):
             output = self._session.run(command, read_until="(gdb)", timeout=timeout)
         except TimeoutError as e:
             # let analyze the status of the gdb session
-            output = f"The command `{command}` had timed out. {e!r}."
-            if not self_call:
+            if command != "run":
+                # if the command is not 'run', we can't restart the gdb session
+                # so we need to close the gdb session
+                self._session.close()
+                output = f"The command `{command}` had timed out. {e!r}."
+            elif not self_call:
                 command = "thread apply all bt"
-                output = self._session.run(command, read_until="(gdb)", timeout=timeout)
+                #output = self.interact_with_gdb(command, timeout, True)
+                output = """Thread 3 (Thread 0x7ffff6ffe6c0 (LWP 3569) "test"):
+                            #0  futex_wait (private=0, expected=2, futex_word=0x555555559040 <mainResource>) at ../sysdeps/nptl/futex-internal.h:146
+                            #1  __GI___lll_lock_wait (futex=futex@entry=0x555555559040 <mainResource>, private=0) at ./nptl/lowlevellock.c:49
+                            #2  0x00007ffff78a0101 in lll_mutex_lock_optimized (mutex=0x555555559040 <mainResource>) at ./nptl/pthread_mutex_lock.c:48
+                            #3  ___pthread_mutex_lock (mutex=0x555555559040 <mainResource>) at ./nptl/pthread_mutex_lock.c:93
+                            #4  0x0000555555555d65 in __gthread_mutex_lock (__mutex=0x555555559040 <mainResource>) at /usr/include/x86_64-linux-gnu/c++/13/bits/gthr-default.h:749
+                            #5  0x0000555555555e22 in std::mutex::lock (this=0x555555559040 <mainResource>) at /usr/include/c++/13/bits/std_mutex.h:113
+                            #6  0x0000555555556033 in std::unique_lock<std::mutex>::lock (this=0x7ffff6ffddd0) at /usr/include/c++/13/bits/unique_lock.h:141
+                            #7  0x0000555555555ea9 in std::unique_lock<std::mutex>::unique_lock (this=0x7ffff6ffddd0, __m=...) at /usr/include/c++/13/bits/unique_lock.h:71
+                            #8  0x0000555555555cd9 in thread2_mappedPageWriter () at resource_sharing.cpp:23
+                            #9  0x0000555555555b7b in std::__invoke_impl<void, void (*)()> (__f=@0x55555556c418: 0x555555555c7c <thread2_mappedPageWriter()>) at /usr/include/c++/13/bits/invoke.h:61
+                            #10 0x0000555555555b27 in std::__invoke<void (*)()> (__fn=@0x55555556c418: 0x555555555c7c <thread2_mappedPageWriter()>) at /usr/include/c++/13/bits/invoke.h:96
+                            #11 0x0000555555555ac8 in std::thread::_Invoker<std::tuple<void (*)()> >::_M_invoke<0ul> (this=0x55555556c418) at /usr/include/c++/13/bits/std_thread.h:292
+                            #12 0x0000555555555a98 in std::thread::_Invoker<std::tuple<void (*)()> >::operator() (this=0x55555556c418) at /usr/include/c++/13/bits/std_thread.h:299
+                            #13 0x0000555555555a78 in std::thread::_State_impl<std::thread::_Invoker<std::tuple<void (*)()> > >::_M_run (this=0x55555556c410) at /usr/include/c++/13/bits/std_thread.h:244
+                            #14 0x00007ffff7cecdb4 in std::execute_native_thread_routine (__p=0x55555556c410) at ../../../../../src/libstdc++-v3/src/c++11/thread.cc:104
+                            #15 0x00007ffff789caa4 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+                            #16 0x00007ffff7929c3c in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+                            Thread 2 (Thread 0x7ffff77ff6c0 (LWP 3568) "test"):
+                            #0  futex_wait (private=0, expected=2, futex_word=0x555555559080 <pagingResource>) at ../sysdeps/nptl/futex-internal.h:146
+                            #1  __GI___lll_lock_wait (futex=futex@entry=0x555555559080 <pagingResource>, private=0) at ./nptl/lowlevellock.c:49
+                            #2  0x00007ffff78a0101 in lll_mutex_lock_optimized (mutex=0x555555559080 <pagingResource>) at ./nptl/pthread_mutex_lock.c:48
+                            #3  ___pthread_mutex_lock (mutex=0x555555559080 <pagingResource>) at ./nptl/pthread_mutex_lock.c:93
+                            #4  0x0000555555555d65 in __gthread_mutex_lock (__mutex=0x555555559080 <pagingResource>) at /usr/include/x86_64-linux-gnu/c++/13/bits/gthr-default.h:749
+                            #5  0x0000555555555e22 in std::mutex::lock (this=0x555555559080 <pagingResource>) at /usr/include/c++/13/bits/std_mutex.h:113
+                            #6  0x0000555555556033 in std::unique_lock<std::mutex>::lock (this=0x7ffff77fedd0) at /usr/include/c++/13/bits/unique_lock.h:141
+                            #7  0x0000555555555ea9 in std::unique_lock<std::mutex>::unique_lock (this=0x7ffff77fedd0, __m=...) at /usr/include/c++/13/bits/unique_lock.h:71
+                            #8  0x0000555555555c16 in thread1_imageSectionCreation () at resource_sharing.cpp:15
+                            #9  0x0000555555555b7b in std::__invoke_impl<void, void (*)()> (__f=@0x55555556c2b8: 0x555555555bb9 <thread1_imageSectionCreation()>) at /usr/include/c++/13/bits/invoke.h:61
+                            #10 0x0000555555555b27 in std::__invoke<void (*)()> (__fn=@0x55555556c2b8: 0x555555555bb9 <thread1_imageSectionCreation()>) at /usr/include/c++/13/bits/invoke.h:96
+                            #11 0x0000555555555ac8 in std::thread::_Invoker<std::tuple<void (*)()> >::_M_invoke<0ul> (this=0x55555556c2b8) at /usr/include/c++/13/bits/std_thread.h:292
+                            #12 0x0000555555555a98 in std::thread::_Invoker<std::tuple<void (*)()> >::operator() (this=0x55555556c2b8) at /usr/include/c++/13/bits/std_thread.h:299
+                            #13 0x0000555555555a78 in std::thread::_State_impl<std::thread::_Invoker<std::tuple<void (*)()> > >::_M_run (this=0x55555556c2b0) at /usr/include/c++/13/bits/std_thread.h:244
+                            #14 0x00007ffff7cecdb4 in std::execute_native_thread_routine (__p=0x55555556c2b0) at ../../../../../src/libstdc++-v3/src/c++11/thread.cc:104
+                            #15 0x00007ffff789caa4 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+                            #16 0x00007ffff7929c3c in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+                            Thread 1 (Thread 0x7ffff7e9c740 (LWP 3516) "test"):
+                            #0  0x00007ffff7898d71 in __futex_abstimed_wait_common64 (private=128, cancel=true, abstime=0x0, op=265, expected=3568, futex_word=0x7ffff77ff990) at ./nptl/futex-internal.c:57
+                            #1  __futex_abstimed_wait_common (cancel=true, private=128, abstime=0x0, clockid=0, expected=3568, futex_word=0x7ffff77ff990) at ./nptl/futex-internal.c:87
+                            #2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x7ffff77ff990, expected=3568, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=128) at ./nptl/futex-internal.c:139
+                            #3  0x00007ffff789e7a3 in __pthread_clockjoin_ex (threadid=140737345746624, thread_return=0x0, clockid=0, abstime=0x0, block=<optimized out>) at ./nptl/pthread_join_common.c:102
+                            #4  0x00007ffff7cece33 in __gthread_join (__threadid=<optimized out>, __value_ptr=0x0) at /build/gcc-14-ig5ci0/gcc-14-14.2.0/build/x86_64-linux-gnu/libstdc++-v3/include/x86_64-linux-gnu/bits/gthr-default.h:682
+                            #5  std::thread::join (this=0x7fffffffd4c8) at ../../../../../src/libstdc++-v3/src/c++11/thread.cc:134
+                            #6  0x000055555555531d in main () at test.cpp:8"""
 
         if output.startswith(command):
             output = output[len(command):].lstrip("\n\r ")

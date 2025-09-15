@@ -1,15 +1,15 @@
-# Root Makefile to build lib and test targets
+# Root Makefile to build src and main targets
 
-.PHONY: all lib test clean
+.PHONY: all src main clean
 
-all: lib test
+all: src main
 
-lib:
-	$(MAKE) -C lib
+src:
+	$(MAKE) -C src
 
-test: lib
-	LD_LIBRARY_PATH=output:lib $(MAKE) -C test
+main: src
+	LD_srcRARY_PATH=output:src $(MAKE) -C main
 
 clean:
-	$(MAKE) -C lib clean
-	$(MAKE) -C test clean
+	$(MAKE) -C src clean
+	$(MAKE) -C main clean
