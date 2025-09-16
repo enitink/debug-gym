@@ -257,20 +257,24 @@ class RepoEnv(TooledEnv):
 
     def set_entrypoints(self, entrypoint: str, debug_entrypoint: str | None = None):
         if entrypoint:
+            is_python = "python " in entrypoint
+
             self.entrypoint = self._prepare_entrypoint(entrypoint)
-            if "python" in entrypoint:
-                debug_entrypoint = debug_entrypoint or entrypoint.replace("python ", "python -m pdb ")
-            else:
-                debug_entrypoint = debug_entrypoint or entrypoint
+
+            if debug_entrypoint is None:
+                debug_entrypoint = (
+                    entrypoint.replace("python ", "python -m pdb ", 1)
+                    if is_python else entrypoint
+                )
+
             self.debug_entrypoint = self._prepare_entrypoint(debug_entrypoint)
-            
-        if self.debug_entrypoint is not None and "python" in self.debug_entrypoint and "-m pdb" not in self.debug_entrypoint:
-            self.debug_entrypoint = self.debug_entrypoint.replace("python ", "python -m pdb ")
-            
-        if self.entrypoint and "python" in self.entrypoint:
-            self.entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.entrypoint
-        if self.debug_entrypoint and "python" in self.debug_entrypoint:
-            self.debug_entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.debug_entrypoint
+
+            if is_python and "-m pdb" not in self.debug_entrypoint:
+                self.debug_entrypoint = self.debug_entrypoint.replace("python ", "python -m pdb ", 1)
+
+            if is_python:
+                self.entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.entrypoint
+                self.debug_entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.debug_entrypoint
 
 
     @staticmethod
