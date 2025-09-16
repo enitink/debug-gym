@@ -16,16 +16,20 @@ base:
     }
     tools: ["pdb", "view", "rewrite"]
     terminal: {
-        type: "docker",  # "docker" or "local"
+        type: "local",  # "docker" or "local"
         base_image: "python:3.12-slim",
         # session_commands define commands that are always executed before starting a shell session or running a single command in the terminal.
         # session_commands:["conda activate aider"],
         # setup_commands define commands that are executed only once when the terminal is created. This is only supported for Docker terminal.
-        setup_commands: ["pip install pytest"],
+        setup_commands: [
+            "apt-get update && apt-get install -y tree git && rm -rf /var/lib/apt/lists/*", 
+            "pip install --no-cache-dir pytest tqdm transformers",
+            "pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu"
+        ],
     }
 
     # LLM configs
-    llm_name: "gpt-4o"
+    llm_name: "gpt-4o-mini"
 
     # Agent configs
     random_seed: 42
