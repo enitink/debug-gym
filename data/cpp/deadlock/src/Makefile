@@ -14,6 +14,7 @@ $(OBJ): $(SRC)
 	$(CXX) $(CXXFLAGS) -c $(SRC) $(INC) -o $(OBJ)
 
 $(TARGET): $(OBJ)
+	mkdir -p ../output
 	$(AR) rcs $(TARGET) $(OBJ)
 
 clean:

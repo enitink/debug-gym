@@ -2,13 +2,14 @@
 
 CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -g
-TARGET = main
+TARGET = ./output/test
 SRC = main.cpp
 
 all: $(TARGET)
 
 $(TARGET): $(SRC)
+	mkdir -p ./output
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC)
 
 clean:
-	rm -f $(TARGET)
+	rm -f ./output/test
