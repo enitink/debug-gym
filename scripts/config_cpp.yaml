@@ -41,4 +41,3 @@ rewrite_agent:
 
 debug_agent_cpp:
     tools: ["grep", "gdb", "view", "rewrite"]
-

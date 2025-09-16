@@ -258,7 +258,8 @@ class RepoEnv(TooledEnv):
     def set_entrypoints(self, entrypoint: str, debug_entrypoint: str | None = None):
         if entrypoint:
             self.entrypoint = entrypoint
-            debug_entrypoint = debug_entrypoint
+            if debug_entrypoint:
+                self.debug_entrypoint = debug_entrypoint
 
 
     @staticmethod
