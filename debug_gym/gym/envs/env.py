@@ -257,9 +257,23 @@ class RepoEnv(TooledEnv):
 
     def set_entrypoints(self, entrypoint: str, debug_entrypoint: str | None = None):
         if entrypoint:
-            self.entrypoint = entrypoint
-            if debug_entrypoint:
-                self.debug_entrypoint = debug_entrypoint
+            self.entrypoint = self._prepare_entrypoint(entrypoint)
+            # Follow original pattern: use provided debug_entrypoint OR auto-generate for Python
+            if "python " in entrypoint:
+                debug_entrypoint = debug_entrypoint or entrypoint.replace("python ", "python -m pdb ")
+            else:
+                debug_entrypoint = debug_entrypoint or entrypoint
+            self.debug_entrypoint = self._prepare_entrypoint(debug_entrypoint)
+            
+        # Original PDB safety check (unchanged) - only for Python commands
+        if self.debug_entrypoint is not None and "python " in self.debug_entrypoint and "-m pdb" not in self.debug_entrypoint:
+            self.debug_entrypoint = self.debug_entrypoint.replace("python ", "python -m pdb ")
+            
+        # Original PYTHONPATH behavior but conditional for C++ support
+        if self.entrypoint and "python" in self.entrypoint:
+            self.entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.entrypoint
+        if self.debug_entrypoint and "python" in self.debug_entrypoint:
+            self.debug_entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.debug_entrypoint
 
 
     @staticmethod
@@ -274,6 +288,12 @@ class RepoEnv(TooledEnv):
         elif "xvfb" in entrypoint:
             # parse "xvfb-run --auto-servernum .venv/bin/python -W ignore -m pytest -rA r2e_tests"
             return entrypoint
+
+        # For C++ commands (make, gdb, ./output/*), don't wrap with Python
+        elif entrypoint_list[0] in ["make", "gdb"] or entrypoint_list[0].startswith("./output/"):
+            # Just ensure we have the absolute path for make/gdb, but keep ./output/ as-is
+            if not entrypoint_list[0].startswith("./output/"):
+                entrypoint_list[0] = f"$(which {entrypoint_list[0]})"
 
         # For non-python commands, ensure we have the absolute path to the Python executable
         # and explicitly run it through Python for consistent execution behavior.
