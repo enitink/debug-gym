@@ -2,7 +2,7 @@ base:
     # Environment configs
     output_path: "exps/debug_cpp"
     env_kwargs: {
-        "path": "data/cpp/deadlock",
+        "path": "data/cpp/simplecrash",
         "entrypoint": "make && ./output/test",
         "debug_entrypoint": "make && gdb ./output/test",
         "dir_tree_depth": 1,
@@ -27,7 +27,7 @@ base:
 
     # Agent configs
     random_seed: 42
-    max_steps: 50
+    max_steps: 12
     max_rewrite_steps: 10
     memory_size: 20
     save_patch: True
