@@ -169,6 +169,7 @@ class ShellSession:
         command: str,
         read_until: str | None = None,
         timeout: int | None = None,
+        from_gdb: bool = False,
     ):
         """Run a command in the Shell session and return the output."""
         output = ""
@@ -184,7 +185,9 @@ class ShellSession:
         except TimeoutError as e:
             # self.close()
             self.logger.debug(f"{e!r}")
-            os.kill(self.process.pid, signal.SIGINT)
+            # Only send SIGINT if called from GDB tool, as it might not be relevant to other languages
+            if from_gdb:
+                os.kill(self.process.pid, signal.SIGINT)
             raise
 
         self.logger.debug(f"{self}: Output: {output!r}")
