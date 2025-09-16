@@ -185,7 +185,6 @@ class ShellSession:
         except TimeoutError as e:
             # self.close()
             self.logger.debug(f"{e!r}")
-            # Only send SIGINT if called from GDB tool, as it might not be relevant to other languages
             if from_gdb:
                 os.kill(self.process.pid, signal.SIGINT)
             raise
