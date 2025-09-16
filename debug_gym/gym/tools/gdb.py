@@ -166,6 +166,8 @@ class GDBTool(EnvironmentTool):
                 self._session.close()
                 output = f"The command `{command}` had timed out. {e!r}."
             elif not self_call:
+                # Filler gdb command before running thread apply all bt
+                self._session.run("list", read_until="(gdb)", timeout=timeout)  # output is not used
                 command = "thread apply all bt"
                 output = self.interact_with_gdb(command, timeout, True)
 

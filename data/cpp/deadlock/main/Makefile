@@ -8,9 +8,11 @@ SRC = test.cpp
 LIBDIR = ../output
 LIBS = -L$(LIBDIR) -lressharing
 
+LIBRARY = ../output/libressharing.a
+
 all: $(TARGET)
 
-$(TARGET): $(SRC)
+$(TARGET): $(SRC) $(LIBRARY)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC) $(INC) $(LIBS)
 
 clean:
