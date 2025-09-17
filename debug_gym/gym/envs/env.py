@@ -257,8 +257,22 @@ class RepoEnv(TooledEnv):
 
     def set_entrypoints(self, entrypoint: str, debug_entrypoint: str | None = None):
         if entrypoint:
-            self.entrypoint = entrypoint
-            debug_entrypoint = debug_entrypoint
+            is_python = "python " in entrypoint
+
+            self.entrypoint = self._prepare_entrypoint(entrypoint)
+
+            if debug_entrypoint is None:
+                debug_entrypoint = entrypoint.replace("python ", "python -m pdb ")
+
+            self.debug_entrypoint = self._prepare_entrypoint(debug_entrypoint)
+
+            if is_python:
+                self.entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.entrypoint
+                self.debug_entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.debug_entrypoint
+
+        # Safety check: Ensure Python debug command includes -m pdb (moved outside if entrypoint block)
+        if self.debug_entrypoint is not None and "python " in self.debug_entrypoint and "-m pdb" not in self.debug_entrypoint:
+            self.debug_entrypoint = self.debug_entrypoint.replace("python ", "python -m pdb ")
 
 
     @staticmethod
@@ -273,6 +287,12 @@ class RepoEnv(TooledEnv):
         elif "xvfb" in entrypoint:
             # parse "xvfb-run --auto-servernum .venv/bin/python -W ignore -m pytest -rA r2e_tests"
             return entrypoint
+
+        # For C++ commands (make, gdb, ./output/*), don't wrap with Python
+        elif entrypoint_list[0] in ["make", "gdb"] or entrypoint_list[0].startswith("./output/"):
+            # Just ensure we have the absolute path for make/gdb, but keep ./output/ as-is
+            if not entrypoint_list[0].startswith("./output/"):
+                entrypoint_list[0] = f"$(which {entrypoint_list[0]})"
 
         # For non-python commands, ensure we have the absolute path to the Python executable
         # and explicitly run it through Python for consistent execution behavior.
