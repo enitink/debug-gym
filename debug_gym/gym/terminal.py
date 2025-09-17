@@ -169,7 +169,7 @@ class ShellSession:
         command: str,
         read_until: str | None = None,
         timeout: int | None = None,
-        from_gdb: bool = False,
+        send_sigint: bool = False,
     ):
         """Run a command in the Shell session and return the output."""
         output = ""
@@ -185,7 +185,7 @@ class ShellSession:
         except TimeoutError as e:
             # self.close()
             self.logger.debug(f"{e!r}")
-            if from_gdb:
+            if send_sigint:
                 os.kill(self.process.pid, signal.SIGINT)
             raise
 
