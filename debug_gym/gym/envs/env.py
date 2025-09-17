@@ -262,19 +262,17 @@ class RepoEnv(TooledEnv):
             self.entrypoint = self._prepare_entrypoint(entrypoint)
 
             if debug_entrypoint is None:
-                debug_entrypoint = (
-                    entrypoint.replace("python ", "python -m pdb ", 1)
-                    if is_python else entrypoint
-                )
+                debug_entrypoint = entrypoint.replace("python ", "python -m pdb ")
 
             self.debug_entrypoint = self._prepare_entrypoint(debug_entrypoint)
-
-            if is_python and "-m pdb" not in self.debug_entrypoint:
-                self.debug_entrypoint = self.debug_entrypoint.replace("python ", "python -m pdb ", 1)
 
             if is_python:
                 self.entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.entrypoint
                 self.debug_entrypoint = "PYTHONPATH=$PYTHONPATH:$PWD " + self.debug_entrypoint
+
+        # Safety check: Ensure Python debug command includes -m pdb (moved outside if entrypoint block)
+        if self.debug_entrypoint is not None and "python " in self.debug_entrypoint and "-m pdb" not in self.debug_entrypoint:
+            self.debug_entrypoint = self.debug_entrypoint.replace("python ", "python -m pdb ")
 
 
     @staticmethod
