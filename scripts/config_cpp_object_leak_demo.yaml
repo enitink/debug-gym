@@ -1,0 +1,25 @@
+base:
+    # Environment configs
+    output_path: "exps/cpp_object_leak"
+    benchmark: "cpp"
+    problems: ["object_leak_debug"]
+    env_kwargs: 
+        source_path: "buggy_cpp_samples/object_leak"
+        entrypoint: "./object_leak"
+        debug_entrypoint: "./object_leak"
+        dir_tree_depth: 2
+        run_timeout: 45
+        show_directory_tree: true
+
+    # LLM configs  
+    llm_name: "gpt-4o-mini-fast"
+
+    # Agent configs
+    random_seed: 42
+    max_steps: 20
+    max_rewrite_steps: 15
+    memory_size: 40
+    save_patch: true
+
+cpp_debug_agent:
+    tools: ["gdb", "view", "rewrite", "eval"]

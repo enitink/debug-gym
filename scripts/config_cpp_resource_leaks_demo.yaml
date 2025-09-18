@@ -1,0 +1,25 @@
+base:
+    # Environment configs
+    output_path: "exps/cpp_resource_leaks"
+    benchmark: "cpp"
+    problems: ["resource_leak_debug"]
+    env_kwargs: 
+        source_path: "buggy_cpp_samples/resource_leaks"
+        entrypoint: "./resource_leaks"
+        debug_entrypoint: "./resource_leaks"
+        dir_tree_depth: 2
+        run_timeout: 50
+        show_directory_tree: true
+
+    # LLM configs  
+    llm_name: "gpt-4o-mini-fast"
+
+    # Agent configs
+    random_seed: 42
+    max_steps: 25
+    max_rewrite_steps: 18
+    memory_size: 50
+    save_patch: true
+
+cpp_debug_agent:
+    tools: ["gdb", "view", "rewrite", "eval"]

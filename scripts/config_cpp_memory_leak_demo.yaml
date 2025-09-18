@@ -1,0 +1,25 @@
+base:
+    # Environment configs
+    output_path: "exps/cpp_memory_leak"
+    benchmark: "cpp"
+    problems: ["memory_leak_demo"]
+    env_kwargs:
+        source_path: "buggy_cpp_samples/memory_leak"
+        entrypoint: "./memory_leak"
+        debug_entrypoint: "./memory_leak"
+        dir_tree_depth: 2
+        run_timeout: 30
+        show_directory_tree: true
+
+    # LLM configs  
+    llm_name: "gpt-4o-mini-fast"
+
+    # Agent configs
+    random_seed: 42
+    max_steps: 20
+    max_rewrite_steps: 10
+    memory_size: 30
+    save_patch: true
+
+cpp_debug_agent:
+    tools: ["gdb", "view", "rewrite", "eval"]

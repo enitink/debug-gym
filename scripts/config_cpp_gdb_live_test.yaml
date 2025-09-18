@@ -1,0 +1,24 @@
+base:
+    # Environment configs
+    output_path: "exps/cpp_gdb_test"
+    benchmark: "cpp"
+    problems: ["custom"]
+    env_kwargs: {
+        "entrypoint": "./buffer_bug",
+        "debug_entrypoint": "./buffer_bug",
+        "dir_tree_depth": 2,
+        "run_timeout": 30,
+        "show_directory_tree": true,
+    }
+
+    # LLM configs  
+    llm_name: "human"
+
+    # Agent configs
+    random_seed: 42
+    max_steps: 10
+    memory_size: 20
+    save_patch: true
+
+cpp_debug_agent:
+    tools: ["gdb", "view", "rewrite", "eval"]
