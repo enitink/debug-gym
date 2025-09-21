@@ -1,0 +1,34 @@
+# Test configuration for new GDB tool functionality
+base:
+    # Environment configs
+    output_path: "exps/gdb_test"
+    env_kwargs: {
+        "path": "data/cpp/simplecrash",
+        "entrypoint": "make && ./test",
+        "debug_entrypoint": "make && gdb ./test",
+        "dir_tree_depth": 1,
+        "run_timeout": 10,
+        # New GDB features from origin/debug-gym-cpp
+        "auto_eval_on_rewrite": False,  # Auto-eval after successful rewrites
+        "persistent_breakpoints": True,  # Maintain breakpoints across GDB sessions
+        "auto_list": True,  # Show code context automatically after GDB commands
+    }
+    tools: ["gdb", "view", "rewrite", "eval"]
+    terminal: {
+        type: "local",
+        setup_commands: ["apt-get update && apt-get install -y gdb", "apt-get install tree"],
+    }
+
+    # LLM configs  
+    llm_name: "gpt-4o"
+
+    # Agent configs
+    random_seed: 42
+    max_steps: 10
+    max_rewrite_steps: 5
+    memory_size: 10
+    save_patch: True
+    log_prompt_response_pairs: True
+
+debug_agent_cpp:
+    tools: ["gdb", "view", "rewrite", "eval"]

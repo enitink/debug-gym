@@ -8,7 +8,7 @@ Debug Gym now supports C++ program debugging with the following key components:
 
 ### Core Components
 
-1. **GDB Tool** (`debug_gym/gym/tools/gdb_tool.py`)
+1. **GDB Tool** (`debug_gym/gym/tools/gdb.py`)
    - Interactive GDB debugger integration
    - Supports common GDB commands: `run`, `bt`, `info registers`, `list`, `disas`, etc.
    - Automatic binary detection and execution
@@ -21,7 +21,7 @@ Debug Gym now supports C++ program debugging with the following key components:
    - **Generic task setup** - discovers issues through debugging rather than hardcoded assumptions
    - C++-specific rewrite tool with proper language context
 
-3. **C++ Debug Agent** (`debug_gym/agents/cpp_debug_agent.py`)
+3. **C++ Debug Agent** (`debug_gym/agents/debug_agent_cpp.py`)
    - Specialized agent for C++ debugging workflows
    - Focuses on memory management, threading, and resource leaks
    - Proper C++ debugging methodology
