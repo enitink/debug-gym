@@ -302,6 +302,9 @@ class BaseAgent:
                 max_score=info.max_score,
                 status="resolved" if info.done else "unresolved",
             )
+        
+            self.analyze_log_for_rca(self.logger.log_file)
+
             return info.done
         except Exception:
             # report any error that happens during the run
@@ -369,6 +372,42 @@ class BaseAgent:
             json.dump(json_output, f, indent=4)
 
         self.logger.debug(f"Trajectory saved in {json_file}")
+
+    def analyze_log_for_rca(self, log_path: str, reasoning_end_token: str = None) :
+        """
+        Reads the debug_gym.log file and sends its content to the LLM to get the Root Cause Analysis (RCA).
+        Optionally strips reasoning using a provided end token.
+        Saves the LLM's RCA response to debug_rca.log in the same directory as the log file.
+        Returns the RCA response as a string.
+        """
+        if not os.path.isfile(log_path):
+            raise FileNotFoundError(f"Log file not found: {log_path}")
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+            log_content = f.read()
+
+        prompt = (
+            "Review the following debug-gym log file and generate:\n"
+            "- Root Cause Analysis (RCA)\n"
+            "- Steps to fix\n"
+            "- Explanation for the fix\n"
+            "\nLog file contents:\n\n" + log_content
+        )
+        messages = [
+            {"role": "user", "content": prompt}
+        ]
+        response = self.llm(messages, tools=[])
+        llm_response = self.llm(messages, tools=[])
+        if hasattr(llm_response, "response"):
+            response_text = llm_response.response
+        else:
+            response_text = str(llm_response)
+
+        # Save the response to debug_rca.log in the same directory as log_path
+        rca_log_path = os.path.join(os.path.dirname(log_path), "debug_rca.log")
+        with open(rca_log_path, "w", encoding="utf-8") as f:
+            f.write(response_text)
+
+        return
 
 
 def create_agent(agent_type: str, **agent_kwargs):
