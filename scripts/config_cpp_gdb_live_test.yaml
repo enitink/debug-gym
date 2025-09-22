@@ -5,7 +5,7 @@ base:
     problems: ["custom"]
     env_kwargs: {
         "entrypoint": "./buffer_bug",
-        "debug_entrypoint": "./buffer_bug",
+        "debug_entrypoint": "gdb ./buffer_bug",
         "dir_tree_depth": 2,
         "run_timeout": 30,
         "show_directory_tree": true,
@@ -20,5 +20,5 @@ base:
     memory_size: 20
     save_patch: true
 
-cpp_debug_agent:
+debug_agent_cpp:
     tools: ["gdb", "view", "rewrite", "eval"]

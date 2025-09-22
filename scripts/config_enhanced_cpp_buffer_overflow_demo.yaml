@@ -1,12 +1,12 @@
 base:
     # Environment configs
-    output_path: "exps/cpp_memory_leak"
+    output_path: "exps/enhanced_cpp_buffer_overflow"
     benchmark: "cpp"
-    problems: ["memory_leak_demo"]
-    env_kwargs:
-        source_path: "buggy_cpp_samples/memory_leak"
-        entrypoint: "./memory_leak"
-        debug_entrypoint: "gdb --readnow ./memory_leak"
+    problems: ["buffer_overflow_demo"]
+    env_kwargs: 
+        source_path: "buggy_cpp_samples/buffer_overflow"
+        entrypoint: "./buffer_bug"
+        debug_entrypoint: "gdb ./buffer_bug"
         dir_tree_depth: 2
         run_timeout: 30
         show_directory_tree: true
@@ -16,10 +16,10 @@ base:
 
     # Agent configs
     random_seed: 42
-    max_steps: 20
+    max_steps: 15
     max_rewrite_steps: 10
     memory_size: 30
     save_patch: true
 
-debug_agent_cpp:
+enhanced_debug_agent_cpp:
     tools: ["gdb", "view", "rewrite", "eval"]

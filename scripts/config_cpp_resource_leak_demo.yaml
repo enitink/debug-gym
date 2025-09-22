@@ -6,7 +6,7 @@ base:
     env_kwargs: 
         source_path: "buggy_cpp_samples/resource_leaks"
         entrypoint: "./resource_leaks"
-        debug_entrypoint: "./resource_leaks"
+        debug_entrypoint: "gdb ./resource_leaks"
         dir_tree_depth: 2
         run_timeout: 60
         show_directory_tree: true
@@ -21,5 +21,5 @@ base:
     memory_size: 50
     save_patch: true
 
-cpp_debug_agent:
+debug_agent_cpp:
     tools: ["gdb", "view", "rewrite", "eval"]
