@@ -321,10 +321,27 @@ clean:
         
         # IMPORTANT: Filter out eval observations to prevent Python interpretation
         self.all_observations = []
-        for obs in self.process_events():
-            # Skip any eval observations that would trigger Python interpreter
-            if obs.source != 'eval':
-                self.all_observations.append(obs)
+        
+        # Process events with protection against infinite loops
+        event_count = 0
+        max_events = 50  # Prevent infinite loops
+        
+        try:
+            for obs in self.process_events():
+                event_count += 1
+                if event_count > max_events:
+                    self.logger.warning(f"Breaking event processing loop after {max_events} events")
+                    break
+                    
+                # Skip any eval observations that would trigger Python interpreter
+                if obs.source != 'eval':
+                    self.all_observations.append(obs)
+                    self.logger.debug(f"Processed event {event_count}: {obs.source}")
+                else:
+                    self.logger.debug(f"Skipped eval event {event_count}")
+        except Exception as e:
+            self.logger.error(f"Error processing events: {e}")
+            # Continue with reset even if event processing fails
 
         # Create initial evaluation that indicates debugging work is needed
         from debug_gym.gym.entities import EvalOutput

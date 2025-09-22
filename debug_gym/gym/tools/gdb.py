@@ -159,17 +159,36 @@ class GDBTool(EnvironmentTool):
         try:
             output = self._session.run(command, read_until="(gdb)", timeout=timeout)
         except TimeoutError as e:
-            # let analyze the status of the gdb session
-            if command != "run":
-                # if the command is not 'run', we can't restart the gdb session
-                # so we need to close the gdb session
-                self._session.close()
-                output = f"The command `{command}` had timed out. {e!r}."
-            elif not self_call:
-                # Filler gdb command before running thread apply all bt
-                self._session.run("list", read_until="(gdb)", timeout=timeout)  # output is not used
-                command = "thread apply all bt"
-                output = self.interact_with_gdb(command, timeout, True)
+            # More intelligent timeout handling - don't close session unnecessarily
+            if command == "run":
+                # For 'run' command timeout, try to get backtrace instead of closing
+                if not self_call:
+                    try:
+                        # Send Ctrl+C to interrupt the running program
+                        self._session.send_signal(2)  # SIGINT
+                        # Wait a moment for the program to stop
+                        self._session.run("", read_until="(gdb)", timeout=5)
+                        # Get backtrace to show where we stopped
+                        command = "thread apply all bt"
+                        output = self.interact_with_gdb(command, timeout, True)
+                    except:
+                        output = f"Program execution timed out after {timeout}s. Use 'continue' to resume or set breakpoints to control execution."
+                else:
+                    output = f"The command `{command}` had timed out. {e!r}."
+            elif command in ["continue", "cont", "c"]:
+                # For continue timeout, the program is still running - this is often expected
+                output = f"Program is still running (timeout after {timeout}s). Use Ctrl+C to interrupt or wait longer."
+            elif command in ["step", "next", "s", "n"]:
+                # For stepping commands that timeout, try to get current status
+                try:
+                    self._session.send_signal(2)  # SIGINT to stop
+                    self._session.run("", read_until="(gdb)", timeout=5)
+                    output = f"Stepping timed out. Program interrupted."
+                except:
+                    output = f"Stepping command timed out after {timeout}s."
+            else:
+                # For other commands, timeout is likely an error but don't close session
+                output = f"The command `{command}` timed out after {timeout}s. Session remains active."
 
         if output.startswith(command):
             output = output[len(command):].lstrip("\n\r ")
@@ -177,8 +196,20 @@ class GDBTool(EnvironmentTool):
         return output
 
     def close_gdb(self):
-        self._session.close()
+        if self._session and self._session.is_running:
+            self._session.close()
+        self._session = None
         self.current_frame_file = None
+
+    def interrupt_program(self):
+        """Send SIGINT to interrupt a running program in GDB."""
+        if self._session and self._session.is_running:
+            try:
+                self._session.send_signal(2)  # SIGINT
+                return True
+            except:
+                return False
+        return False
 
     def start_gdb(self, environment) -> str:
         self._session = environment.terminal.new_shell_session()
@@ -187,10 +218,15 @@ class GDBTool(EnvironmentTool):
             environment.debug_entrypoint, read_until="(gdb)"
         )
 
+        # Don't explicitly load executable since it's already in the command line
+        # Just ensure the session is properly started
+
         # Disable paging in GDB
         self._session.run("set pagination off", read_until="(gdb)", timeout=environment.run_timeout)
         # Enable debuginfod in GDB
         self._session.run("set debuginfod enabled off", read_until="(gdb)", timeout=environment.run_timeout)
+        # Automatically confirm symbol loading questions
+        self._session.run("set confirm off", read_until="(gdb)", timeout=environment.run_timeout)
 
         if "The program finished and will be restarted" in initial_output:
             self.close_gdb()
@@ -240,6 +276,8 @@ class GDBTool(EnvironmentTool):
                 _warning += "Multiple commands are not supported. Only the first command will be executed."
 
         success, output = True, ""
+        
+        # Start GDB session if not running
         if not self.gdb_is_running:
             output += self.start_gdb(environment)
 
@@ -247,6 +285,7 @@ class GDBTool(EnvironmentTool):
             # gdb failed to start
             return Observation(self.name, f"Failure calling gdb:\n{output}")
 
+        # Handle special commands that don't need to interact with GDB directly
         if command in ["info breakpoints"]:
             # list all breakpoints
             success, output = (
@@ -263,59 +302,75 @@ class GDBTool(EnvironmentTool):
                 gdb_out = self.interact_with_gdb(command, environment.run_timeout)
                 # remove the working dir from the output
                 gdb_out = gdb_out.replace(f"{environment.working_dir}/", "")
+                
+                # Handle common GDB responses that indicate issues
                 if gdb_out in (
                     "End of file",
-                    "Blank or comment",
+                    "Blank or comment", 
                     "*** Blank or comment",
                 ):
-                    # if out of bounds, gdb may return messages like 'No such file or directory.' or 'No line number'
                     success = False
                     output = f"Invalid line number: {gdb_out}."
+                elif "No such file or directory" in gdb_out:
+                    success = False
+                    output = f"File not found: {gdb_out}"
+                elif "The program is not being run" in gdb_out and command in ["continue", "cont", "c", "step", "next", "s", "n"]:
+                    # This is expected when trying to continue/step without a running program
+                    output += f"Gdb command output:\n{gdb_out}"
+                elif "Breakpoint" in gdb_out or "Hardware assisted breakpoint" in gdb_out:
+                    # Breakpoint was hit - this is good
+                    output += f"Gdb command output:\n{gdb_out}"
                 else:
                     output += f"Gdb command output:\n{gdb_out}"
-                self.update_breakpoints(environment)
-            except Exception:
+                    
+                # Update breakpoints state after successful command
+                if success and command.split()[0] in ["break", "b", "tbreak", "rbreak", "delete", "clear", "disable", "enable"]:
+                    self.update_breakpoints(environment)
+                    
+            except Exception as e:
                 success = False
+                output = f"Error executing GDB command: {str(e)}"
 
         if not success:
-            if _warning:  # prevend additional \n
+            if _warning:
                 obs = f"Invalid gdb command: {command}\n{_warning}\n{output.strip()}"
             else:
                 obs = f"Invalid gdb command: {command}\n{output.strip()}"
             return Observation(self.name, obs)
 
-        # sometimes it will run into the end of the program
-        # we need to put the stdout before:
-        # The program exited via sys.exit().
-        # into self.last_eval_output, and remove them from the output
-        if "The program exited via sys.exit()." in output:
-            # end index is the last occurrence of the program exited (from the \n after)
-            start_index = output.rfind("The program exited via sys.exit().")
-            end_index = output.find("\n", start_index) + 1
-            output = (
-                output[:start_index]
-                + "\nReached the end of the program. Restarting the debugging session.\n"
-                + output[end_index:]
-            )
+        # Handle program exit messages more gracefully
+        if "exited normally" in output or "exited with code" in output:
+            output += "\nProgram has exited. Use 'run' to start again or set breakpoints before running."
+        elif "The program finished and will be restarted" in output:
+            output += "\nProgram finished. GDB is ready for the next run command."
+
         if _warning:
             obs = f"{_warning}\n{output.strip()}\n"
         else:
             obs = f"{output.strip()}\n"
 
-        # Add the current frame information to the observation.
+        # Add the current frame information to the observation only if program is stopped at a breakpoint
         if self.gdb_is_running:
-            # read the current frame info to determine the current file
-            current_frame = self.set_current_frame_file(environment)
-
-            # free 'list' to provide context around the current frame
-            list_output = ""
-            if environment.auto_list and command.split()[0] not in ["l", "list"]:
-                list_output = self.interact_with_gdb("l .", environment.run_timeout)
-
-            if current_frame:
-                obs += f"\nCurrent frame:\n{current_frame}\n"
-            if list_output:
-                obs += f"\nContext around the current frame:\n{list_output}\n"
+            # Try to get current frame info
+            try:
+                current_frame = self.set_current_frame_file(environment)
+                
+                # Only show context if we're actually stopped in the program (not just at gdb prompt)
+                if current_frame and not any(x in output.lower() for x in ["exited", "not being run", "no stack"]):
+                    # Get context around current line
+                    list_output = ""
+                    if environment.auto_list and command.split()[0] not in ["l", "list"]:
+                        try:
+                            list_output = self.interact_with_gdb("l .", environment.run_timeout)
+                        except:
+                            pass  # Skip if list fails
+                    
+                    if current_frame:
+                        obs += f"\nCurrent frame:\n{current_frame}\n"
+                    if list_output and "No such file or directory" not in list_output:
+                        obs += f"\nContext around the current frame:\n{list_output}\n"
+            except:
+                pass  # Skip frame info if there's any error
 
         return Observation(self.name, obs)
 
@@ -393,18 +448,25 @@ class GDBTool(EnvironmentTool):
         """
         Use 'frame' or 'where' to obtain the current frame (file and line number) in GDB.
         """
-        command = "frame"
-        output = self.interact_with_gdb(command, environment.run_timeout)
-        # GDB 'frame' output example:
-        # #0  in main () at main.cpp:5
-        file_path = None
-        line_number = None
-        frame_pattern = re.compile(r"at\s+(.+):(\d+)")
-        for line in output.splitlines():
-            match = frame_pattern.search(line)
-            if match:
-                file_path, line_number = match.groups()
-                break
-        if self.current_frame_file != file_path:
-            self.current_frame_file = file_path
-        return file_path
+        try:
+            command = "frame"
+            output = self.interact_with_gdb(command, environment.run_timeout)
+            # GDB 'frame' output example:
+            # #0  in main () at main.cpp:5
+            # #0  main () at main.cpp:5  
+            file_path = None
+            line_number = None
+            frame_pattern = re.compile(r"at\s+(.+):(\d+)")
+            for line in output.splitlines():
+                match = frame_pattern.search(line)
+                if match:
+                    file_path, line_number = match.groups()
+                    break
+            
+            if file_path and self.current_frame_file != file_path:
+                self.current_frame_file = file_path
+            
+            return file_path
+        except:
+            # If frame command fails, don't crash - just return None
+            return None
