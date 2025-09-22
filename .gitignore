@@ -11,6 +11,12 @@ __pycache__/
 # C extensions
 *.so
 
+# C++ compiled executables
+buggy_cpp_samples/*/null_deref
+buggy_cpp_samples/*/memory_leak
+buggy_cpp_samples/*/*.out
+buggy_cpp_samples/*/a.out
+
 # Distribution / packaging
 .Python
 build/
