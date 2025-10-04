@@ -1,0 +1,44 @@
+base:
+    # Environment configs
+    output_path: "exps/debug_cpp"
+    env_kwargs: {
+        "path": "data/cpp/simplecrash",
+        "entrypoint": "make && ./main",
+        "debug_entrypoint": "make && gdb ./main",
+        "dir_tree_depth": 1,
+        "run_timeout": 10,
+        # shortcut features
+        "auto_eval_on_rewrite": False,  # The environment will automatically call the Eval tool after a successful rewrite. If this is set to True, the agent does not need to call the Eval tool itself.
+        "persistent_breakpoints": True,  # The environemnt will keep a set of breakpoint states across GDB sessions. When a new GDB session is started, the environment will automatically load the breakpoints from the previous session.
+        "auto_list": True,  # The environment will automatically call `info breakpoints .` via the GDB tool after every GDB tool call, which will show the code around the current frame.
+    }
+    tools: ["gdb", "view", "rewrite"]
+    terminal: {
+        type: "local",  # "docker" or "local"
+        base_image: "gcc:latest",
+        # session_commands define commands that are always executed before starting a shell session or running a single command in the terminal.
+        # session_commands:["conda activate aider"],
+        # setup_commands define commands that are executed only once when the terminal is created. This is only supported for Docker terminal.
+        setup_commands: ["apt-get update && apt-get install -y gdb gdbserver", "apt-get install tree"],
+    }
+
+    # LLM configs
+    llm_name: "gpt-4o"
+
+    # Agent configs
+    random_seed: 42
+    max_steps: 50
+    max_rewrite_steps: 10
+    memory_size: 20
+    save_patch: True
+    log_prompt_response_pairs: True
+    reset_prompt_history_after_rewrite: True
+    # Optionally loads a custom system prompt template from a file.
+    # system_prompt_template_file: "script/templates/system_prompt.jinja"
+
+rewrite_agent:
+    tools: ["grep", "view", "rewrite", "eval"]
+
+debug_agent_cpp:
+    tools: ["grep", "gdb", "view", "rewrite", "eval"]
+
